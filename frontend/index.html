@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Manager</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    body { background: #f0f2f5; min-height: 100vh; display: flex; justify-content: center; padding: 2rem 1rem; }
+    .container { width: 100%; max-width: 560px; }
+    h1 { font-size: 1.8rem; margin-bottom: 1.5rem; color: #1e1e2e; }
+    h2 { font-size: 1.2rem; margin-bottom: .75rem; color: #333; }
+    .card { background: #fff; border-radius: 10px; padding: 1.25rem; margin-bottom: 1rem; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    input, select { display: block; width: 100%; padding: .55rem .75rem; margin-bottom: .5rem;
+      border: 1px solid #d1d5db; border-radius: 6px; font-size: .95rem; outline: none; }
+    input:focus { border-color: #4f46e5; box-shadow: 0 0 0 2px rgba(79,70,229,.15); }
+    .btn { display: inline-block; padding: .55rem 1rem; border: none; border-radius: 6px;
+      font-size: .9rem; font-weight: 500; cursor: pointer; transition: opacity .15s; }
+    .btn:hover { opacity: .88; }
+    .btn-primary { background: #4f46e5; color: #fff; }
+    .btn-success { background: #16a34a; color: #fff; }
+    .btn-danger  { background: #dc2626; color: #fff; }
+    .btn-ghost   { background: #e5e7eb; color: #374151; }
+    .btn-full { width: 100%; margin-bottom: .4rem; }
+    .btn-sm { padding: .35rem .7rem; font-size: .8rem; }
+    .row { display: flex; gap: .5rem; margin-bottom: .4rem; }
+    .row .btn { flex: 1; }
+    .msg { padding: .5rem .75rem; border-radius: 6px; margin-bottom: .75rem; font-size: .9rem; display: none; }
+    .msg.error   { background: #fee2e2; color: #991b1b; display: block; }
+    .msg.success { background: #dcfce7; color: #166534; display: block; }
+    .toggle-link { color: #4f46e5; cursor: pointer; font-size: .9rem; text-align: center;
+      display: block; margin-top: .5rem; text-decoration: underline; }
+    .task-item { background: #fff; border-radius: 8px; padding: 1rem; margin-bottom: .6rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06); display: flex; justify-content: space-between;
+      align-items: flex-start; gap: .5rem; }
+    .task-item.done .task-title { text-decoration: line-through; color: #9ca3af; }
+    .task-title { font-weight: 600; color: #1e1e2e; }
+    .task-desc  { font-size: .82rem; color: #6b7280; margin-top: .2rem; }
+    .task-meta  { font-size: .75rem; color: #9ca3af; margin-top: .25rem; }
+    .task-actions { display: flex; gap: .35rem; flex-shrink: 0; }
+    .badge { display: inline-block; padding: .15rem .5rem; border-radius: 999px; font-size: .72rem; font-weight: 600; }
+    .badge-done   { background: #dcfce7; color: #166534; }
+    .badge-active { background: #eff6ff; color: #1d4ed8; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .filter-row { display: flex; gap: .5rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+    .filter-row select { width: auto; margin: 0; }
+    .filter-row label { font-size: .85rem; color: #555; white-space: nowrap; }
+    .empty { text-align: center; color: #9ca3af; padding: 2rem 0; font-size: .95rem; }
+    .hidden { display: none !important; }
+    #task-count { font-size: .85rem; color: #6b7280; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>📝 Task Manager</h1>
+
+  <!-- ── Auth Section ── -->
+  <div id="auth-section">
+    <div class="card" id="login-card">
+      <h2>Login</h2>
+      <div class="msg" id="login-msg"></div>
+      <input id="login-username" placeholder="Username" autocomplete="username">
+      <input id="login-password" type="password" placeholder="Password" autocomplete="current-password">
+      <button class="btn btn-primary btn-full" onclick="login()">Login</button>
+      <span class="toggle-link" onclick="toggleForm()">Don't have an account? Register</span>
+    </div>
+
+    <div class="card hidden" id="register-card">
+      <h2>Create Account</h2>
+      <div class="msg" id="reg-msg"></div>
+      <input id="reg-username" placeholder="Username (min 3 chars)" autocomplete="username">
+      <input id="reg-email" placeholder="Email" type="email" autocomplete="email">
+      <input id="reg-password" type="password" placeholder="Password (min 6 chars)" autocomplete="new-password">
+      <button class="btn btn-primary btn-full" onclick="register()">Register</button>
+      <span class="toggle-link" onclick="toggleForm()">Already have an account? Login</span>
+    </div>
+  </div>
+
+  <!-- ── Tasks Section ── -->
+  <div id="tasks-section" class="hidden">
+    <div class="topbar">
+      <div>
+        <span style="font-weight:600;color:#1e1e2e" id="welcome-msg"></span><br>
+        <span id="task-count"></span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Logout</button>
+    </div>
+
+    <!-- Create Task -->
+    <div class="card">
+      <h2>New Task</h2>
+      <div class="msg" id="create-msg"></div>
+      <input id="new-title" placeholder="Task title *">
+      <input id="new-desc" placeholder="Description (optional)">
+      <button class="btn btn-primary btn-full" onclick="createTask()">+ Add Task</button>
+    </div>
+
+    <!-- Filter -->
+    <div class="filter-row">
+      <label>Filter:</label>
+      <select id="filter-select" onchange="loadTasks()">
+        <option value="">All tasks</option>
+        <option value="false">Active only</option>
+        <option value="true">Completed only</option>
+      </select>
+    </div>
+
+    <!-- Task List -->
+    <div id="task-list"></div>
+  </div>
+</div>
+
+<script>
+  const API = window.location.origin;
+  let token = localStorage.getItem("tm_token");
+  let currentUsername = localStorage.getItem("tm_username") || "";
+
+  if (token) showTasks();
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
+  function showMsg(id, text, type = "error") {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = `msg ${type}`;
+  }
+
+  function clearMsg(id) {
+    const el = document.getElementById(id);
+    el.className = "msg";
+    el.textContent = "";
+  }
+
+  function toggleForm() {
+    document.getElementById("login-card").classList.toggle("hidden");
+    document.getElementById("register-card").classList.toggle("hidden");
+  }
+
+  function fmtDate(iso) {
+    return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  // ── Auth ─────────────────────────────────────────────────────────────────
+
+  async function register() {
+    clearMsg("reg-msg");
+    const body = {
+      username: document.getElementById("reg-username").value.trim(),
+      email: document.getElementById("reg-email").value.trim(),
+      password: document.getElementById("reg-password").value,
+    };
+    if (!body.username || !body.email || !body.password) {
+      showMsg("reg-msg", "All fields are required."); return;
+    }
+    const r = await fetch(`${API}/auth/register`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+    });
+    const data = await r.json();
+    if (r.ok) {
+      showMsg("reg-msg", "Account created! You can now login.", "success");
+      setTimeout(toggleForm, 1200);
+    } else {
+      showMsg("reg-msg", data.detail || "Registration failed.");
+    }
+  }
+
+  async function login() {
+    clearMsg("login-msg");
+    const body = {
+      username: document.getElementById("login-username").value.trim(),
+      password: document.getElementById("login-password").value,
+    };
+    if (!body.username || !body.password) { showMsg("login-msg", "Both fields are required."); return; }
+    const r = await fetch(`${API}/auth/login`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+    });
+    const data = await r.json();
+    if (r.ok) {
+      token = data.access_token;
+      currentUsername = body.username;
+      localStorage.setItem("tm_token", token);
+      localStorage.setItem("tm_username", currentUsername);
+      showTasks();
+    } else {
+      showMsg("login-msg", data.detail || "Login failed.");
+    }
+  }
+
+  function logout() {
+    token = null; currentUsername = "";
+    localStorage.removeItem("tm_token");
+    localStorage.removeItem("tm_username");
+    document.getElementById("tasks-section").classList.add("hidden");
+    document.getElementById("auth-section").classList.remove("hidden");
+  }
+
+  function showTasks() {
+    document.getElementById("auth-section").classList.add("hidden");
+    document.getElementById("tasks-section").classList.remove("hidden");
+    document.getElementById("welcome-msg").textContent = `👋 Hello, ${currentUsername}`;
+    loadTasks();
+  }
+
+  // ── Tasks ─────────────────────────────────────────────────────────────────
+
+  async function loadTasks() {
+    const completed = document.getElementById("filter-select").value;
+    let url = `${API}/tasks?page_size=100`;
+    if (completed !== "") url += `&completed=${completed}`;
+
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (r.status === 401) { logout(); return; }
+    const data = await r.json();
+
+    const total = data.total;
+    document.getElementById("task-count").textContent =
+      `${total} task${total !== 1 ? "s" : ""}`;
+
+    const list = document.getElementById("task-list");
+    if (!data.tasks.length) {
+      list.innerHTML = `<div class="empty">No tasks here yet. Add one above!</div>`;
+      return;
+    }
+
+    list.innerHTML = "";
+    data.tasks.forEach(t => {
+      const div = document.createElement("div");
+      div.className = "task-item" + (t.completed ? " done" : "");
+      div.innerHTML = `
+        <div style="flex:1;min-width:0">
+          <div class="task-title">${escHtml(t.title)}</div>
+          ${t.description ? `<div class="task-desc">${escHtml(t.description)}</div>` : ""}
+          <div class="task-meta">
+            <span class="badge ${t.completed ? 'badge-done' : 'badge-active'}">${t.completed ? "Completed" : "Active"}</span>
+            &nbsp;Created ${fmtDate(t.created_at)}
+          </div>
+        </div>
+        <div class="task-actions">
+          <button class="btn btn-success btn-sm" onclick="toggleTask(${t.id}, ${t.completed})" title="${t.completed ? 'Mark active' : 'Mark done'}">
+            ${t.completed ? "↩" : "✓"}
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="deleteTask(${t.id})" title="Delete">✕</button>
+        </div>`;
+      list.appendChild(div);
+    });
+  }
+
+  async function createTask() {
+    clearMsg("create-msg");
+    const title = document.getElementById("new-title").value.trim();
+    const description = document.getElementById("new-desc").value.trim();
+    if (!title) { showMsg("create-msg", "Title is required."); return; }
+
+    const r = await fetch(`${API}/tasks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ title, description: description || null }),
+    });
+    if (r.ok) {
+      document.getElementById("new-title").value = "";
+      document.getElementById("new-desc").value = "";
+      showMsg("create-msg", "Task created!", "success");
+      setTimeout(() => clearMsg("create-msg"), 1500);
+      loadTasks();
+    } else {
+      const data = await r.json();
+      showMsg("create-msg", data.detail || "Failed to create task.");
+    }
+  }
+
+  async function toggleTask(id, current) {
+    await fetch(`${API}/tasks/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ completed: !current }),
+    });
+    loadTasks();
+  }
+
+  async function deleteTask(id) {
+    if (!confirm("Delete this task?")) return;
+    await fetch(`${API}/tasks/${id}`, {
+      method: "DELETE", headers: { Authorization: `Bearer ${token}` }
+    });
+    loadTasks();
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+  // Allow Enter key on login/register inputs
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Enter") return;
+    if (!document.getElementById("register-card").classList.contains("hidden")) register();
+    else if (!document.getElementById("login-card").classList.contains("hidden")) login();
+    else if (!document.getElementById("tasks-section").classList.contains("hidden")) createTask();
+  });
+</script>
+</body>
+</html>
